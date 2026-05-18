@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61", "wheel", "pybind11>=2.11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devops-analyzer"
+version = "0.1.0"
+description = "扫描源码、提取代码块、大模型分析并生成 README.md"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "ZHUHK" }]
+dependencies = [
+    # tree-sitter-languages 尚未适配 py-tree-sitter 0.22+ 的 Language API，见 grantjenks/py-tree-sitter-languages#77
+    "tree-sitter>=0.21.0,<0.22",
+    "tree-sitter-languages>=1.10.0",
+    "openai>=1.40.0",
+]
+
+[project.optional-dependencies]
+zhipuai = ["zhipuai>=2.0.0"]
+all = ["zhipuai>=2.0.0"]
+
+[project.scripts]
+devops = "devops.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/example/devops-analyzer"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["devops*"]
+
+[tool.setuptools.package-data]
+devops = ["py.typed"]
