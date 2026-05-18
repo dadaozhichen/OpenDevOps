@@ -26,7 +26,7 @@ build = ["build>=1.2.0"]
 devops = "devops.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/example/devops-analyzer"
+Homepage = "https://github.com/dadaozhichen/OpenDevOps"
 
 [tool.setuptools.packages.find]
 where = ["."]
