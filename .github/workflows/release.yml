@@ -44,6 +44,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install "build>=1.2.0"
       - run: python -m build -w -o dist
+      # PyPI 拒绝裸 linux_x86_64，须 manylinux_*（PEP 600）
+      - name: Linux wheel → manylinux（PyPI 要求）
+        if: runner.os == 'Linux'
+        run: |
+          pip install auditwheel
+          mkdir -p wheelhouse
+          auditwheel repair dist/*.whl -w wheelhouse
+          rm -f dist/*.whl
+          mv wheelhouse/*.whl dist/
       - uses: actions/upload-artifact@v6
         with:
           name: dist-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
