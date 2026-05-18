@@ -19,13 +19,13 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install "build>=1.2.0"
       - run: python -m build -s -o dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dist-sdist
           path: dist/*
@@ -38,13 +38,13 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install "build>=1.2.0"
       - run: python -m build -w -o dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dist-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*.whl
@@ -53,14 +53,14 @@ jobs:
     needs: [sdist, wheels]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: dist-*
           path: dist
           merge-multiple: true
       - name: List artifacts
         run: ls -la dist
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
@@ -72,7 +72,7 @@ jobs:
     if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: dist-*
           path: dist
