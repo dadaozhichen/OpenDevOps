@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devops-analyzer"
-version = "0.1.0"
+version = "0.1.1"
 description = "扫描源码、提取代码块、大模型分析并生成 README.md"
 readme = "README.md"
 requires-python = ">=3.9"
