@@ -9,6 +9,7 @@ from typing import Any
 
 from devops.extract import CodeBlock, extract_blocks_from_paths
 from devops.models import BaseChatModel, get_chat_model
+from devops.ui import thinking
 
 MAX_CODE_LINES = 80
 MAX_CHARS_PER_REQUEST = 24_000
@@ -44,7 +45,8 @@ def _format_blocks_for_prompt(blocks: list[CodeBlock]) -> str:
 
 
 def _chat(model: BaseChatModel, prompt: str) -> str:
-    return model.chat(SYSTEM_PROMPT, prompt, temperature=0.2)
+    with thinking():
+        return model.chat(SYSTEM_PROMPT, prompt, temperature=0.2)
 
 
 def analyze_blocks(
