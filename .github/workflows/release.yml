@@ -1,4 +1,10 @@
-# 推送以 v 开头的 tag（如 v0.1.0）时构建多平台、多 Python 版本的 wheel + 一份 sdist，并写入 GitHub Release。
+# 推送以 v 开头的 tag（如 v0.1.0）时：
+# 1) 构建多平台、多 Python 版本的 wheel + 一份 sdist
+# 2) 创建 GitHub Release 并上传制品
+# 3) 在 Release 成功后使用 PyPI 可信发布（OIDC）上传到 PyPI
+#
+# PyPI 配置：在 https://pypi.org/manage/account/publishing/ 为项目添加 Trusted Publisher，
+# 类型选 GitHub，填写本仓库的 owner/name，工作流选 Release（本文件），环境名留空（除非下面 job 加了 environment）。
 name: Release
 
 on:
@@ -7,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   sdist:
@@ -59,3 +66,20 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    needs: [github-release]
+    if: github.event.repository.fork == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # 未配置 PyPI Trusted Publisher 时，可临时改用 API Token：
+          # password: ${{ secrets.PYPI_API_TOKEN }}
