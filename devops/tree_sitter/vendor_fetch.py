@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -49,11 +50,40 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> None:
     )
 
 
+def _remove_tree(path: Path) -> None:
+    """Remove a directory tree (Windows .git pack files may be read-only)."""
+    if not path.exists():
+        return
+
+    def onerror(func, p, exc_info):
+        exc = exc_info[1]
+        if func in (os.remove, os.unlink, os.rmdir) and exc is not None:
+            os.chmod(p, stat.S_IWUSR | stat.S_IREAD)
+            func(p)
+        else:
+            raise exc
+
+    try:
+        shutil.rmtree(path, onerror=onerror)
+    except OSError:
+        if sys.platform == "win32":
+            subprocess.run(
+                ["cmd", "/c", "rmdir", "/s", "/q", str(path)],
+                check=True,
+            )
+        else:
+            raise
+
+
 def _strip_git_metadata(dest: Path) -> None:
     """Vendor only needs sources; remove .git to avoid detached-HEAD noise in CI logs."""
     git_dir = dest / ".git"
     if git_dir.exists():
-        shutil.rmtree(git_dir)
+        try:
+            _remove_tree(git_dir)
+        except OSError:
+            # Leaving .git does not affect compilation; avoid failing Windows CI.
+            print(f"warning: could not remove {git_dir}; continuing", flush=True)
 
 
 def _repo_marker(name: str, dest: Path) -> Path:
@@ -73,7 +103,7 @@ def _clone_repo(name: str, url: str, ref: str) -> None:
 
     VENDOR_ROOT.mkdir(parents=True, exist_ok=True)
     if dest.exists():
-        shutil.rmtree(dest)
+        _remove_tree(dest)
 
     print(f"==> clone {name} @ {ref}", flush=True)
 
@@ -83,7 +113,7 @@ def _clone_repo(name: str, url: str, ref: str) -> None:
         return
     except subprocess.CalledProcessError:
         if dest.exists():
-            shutil.rmtree(dest)
+            _remove_tree(dest)
 
     _run(["git", "clone", "--depth", "1", url, str(dest)])
     try:
@@ -93,7 +123,7 @@ def _clone_repo(name: str, url: str, ref: str) -> None:
         return
     except subprocess.CalledProcessError:
         if dest.exists():
-            shutil.rmtree(dest)
+            _remove_tree(dest)
 
     _run(["git", "clone", "--depth", "1", url, str(dest)])
     _run(["git", "fetch", "--depth", "1", "origin", ref], cwd=dest)
