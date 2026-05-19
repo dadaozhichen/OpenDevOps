@@ -18,6 +18,15 @@ pip install zhipuai
 
 从 PyPI 安装的 **wheel** 已包含编译好的 `scan_native` 与 `tree_sitter_native`，可直接 `devops config` / `devops <项目路径>`。
 
+**Python 3.13**：会自动安装 `tree-sitter>=0.22`（带 Windows 等平台预编译 wheel）；3.12 及以下仍使用 `tree-sitter 0.21.x`。
+
+### Windows 说明
+
+| 安装方式 | 要求 |
+|----------|------|
+| `pip install devops-analyzer`（PyPI wheel） | 推荐 |
+| `pip install -e .`（源码） | 需 **Git**、**Microsoft C++ Build Tools**（[下载](https://visualstudio.microsoft.com/visual-cpp-build-tools/)），用于编译本项目的 C++ 扩展 |
+
 ## 首次使用：配置模型 API
 
 **必须先配置你自己的 API Key**，再分析项目：

@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "devops-analyzer"
-version = "0.1.4"
+version = "0.1.5"
 description = "扫描源码、提取代码块、大模型分析并生成 README.md"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [{ name = "ZHUHK" }]
 dependencies = [
-    # tree-sitter-languages 尚未适配 py-tree-sitter 0.22+；grammar 由 devops.tree_sitter 原生扩展提供
-    "tree-sitter>=0.21.0,<0.22",
+    "tree-sitter>=0.21.0,<0.22; python_version < '3.13'",
+    "tree-sitter>=0.22.0,<0.25; python_version >= '3.13'",
     "openai>=1.40.0",
 ]
 
