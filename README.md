@@ -5,9 +5,10 @@
 ## 安装
 
 ```bash
+# 推荐：安装 PyPI 预编译 wheel（Release CI 已编译好原生扩展，Windows 无需 MSVC）
 pip install devops-analyzer
 
-# 或从源码安装（会自动拉取 tree-sitter grammar 并编译原生扩展，需 git + C++ 编译器）
+# 或从源码安装（会自动拉取 tree-sitter grammar 并本地编译，需 git + C++ 编译器）
 git clone https://github.com/dadaozhichen/OpenDevOps.git
 cd OpenDevOps
 pip install -e .
@@ -16,7 +17,14 @@ pip install -e .
 pip install zhipuai
 ```
 
-从 PyPI 安装的 **wheel** 已包含编译好的 `scan_native` 与 `tree_sitter_native`，可直接 `devops config` / `devops <项目路径>`。
+打 tag 发布时，GitHub Actions 会在 **Linux / macOS / Windows** 上为 Python 3.11–3.13 **预编译** `scan_native` 与 `tree_sitter_native` 并上传 wheel。  
+因此 `pip install devops-analyzer` 会优先安装这些 wheel，**一般不需要在本机编译 C++**。
+
+从 [GitHub Releases](https://github.com/dadaozhichen/OpenDevOps/releases) 下载的 `.whl` 同样为预编译包，可按平台与 Python 版本手动安装：
+
+```bash
+pip install devops_analyzer-0.1.5-cp313-cp313-win_amd64.whl
+```
 
 **Python 3.13**：会自动安装 `tree-sitter>=0.22`（带 Windows 等平台预编译 wheel）；3.12 及以下仍使用 `tree-sitter 0.21.x`。
 
@@ -24,8 +32,14 @@ pip install zhipuai
 
 | 安装方式 | 要求 |
 |----------|------|
-| `pip install devops-analyzer`（PyPI wheel） | 推荐 |
-| `pip install -e .`（源码） | 需 **Git**、**Microsoft C++ Build Tools**（[下载](https://visualstudio.microsoft.com/visual-cpp-build-tools/)），用于编译本项目的 C++ 扩展 |
+| `pip install devops-analyzer`（PyPI / Release 预编译 wheel） | 推荐，**无需**安装 MSVC |
+| `pip install -e .` 或 `pip install .`（仅 sdist / 源码） | 需 **Git**、**Microsoft C++ Build Tools**（[下载](https://visualstudio.microsoft.com/visual-cpp-build-tools/)） |
+
+若 pip 误从源码包编译（例如无对应 wheel 的 Python 版本），可指定仅装二进制包：
+
+```bash
+pip install devops-analyzer --only-binary devops-analyzer
+```
 
 ## 首次使用：配置模型 API
 

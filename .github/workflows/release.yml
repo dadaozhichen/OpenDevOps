@@ -1,7 +1,7 @@
-# 推送以 v 开头的 tag（如 v0.1.4）时：
-# 1) 构建多平台、多 Python 版本的 wheel + 一份 sdist
-# 2) 创建 GitHub Release 并上传制品
-# 3) 在 Release 成功后使用 PyPI 可信发布（OIDC）上传到 PyPI
+# 推送以 v 开头的 tag（如 v0.1.5）时：
+# 1) 在 CI 中预编译 scan_native / tree_sitter_native，打出各平台 wheel + 一份 sdist
+# 2) 创建 GitHub Release 并上传制品（用户 pip 安装 wheel 无需本地 MSVC）
+# 3) Release 成功后发布到 PyPI
 #
 # PyPI 配置：在 https://pypi.org/manage/account/publishing/ 为项目添加 Trusted Publisher，
 # 类型选 GitHub，填写本仓库的 owner/name，工作流选 Release（本文件），环境名留空（除非下面 job 加了 environment）。
@@ -50,8 +50,10 @@ jobs:
         env:
           PYTHONUTF8: "1"
         run: python scripts/ensure_vendor_tree_sitter.py
-      - run: pip install "build>=1.2.0" "pybind11>=2.11"
-      - run: python -m build -w -o dist
+      - name: Install build deps
+        run: pip install "build>=1.2.0" "pybind11>=2.11"
+      - name: Prebuild wheel (native extensions)
+        run: python -m build -w -o dist
       # PyPI 拒绝裸 linux_x86_64，须 manylinux_*（PEP 600）
       - name: Linux wheel → manylinux（PyPI 要求）
         if: runner.os == 'Linux'
@@ -61,6 +63,9 @@ jobs:
           auditwheel repair dist/*.whl -w wheelhouse
           rm -f dist/*.whl
           mv wheelhouse/*.whl dist/
+      - name: Verify prebuilt native modules in wheel
+        shell: bash
+        run: python scripts/verify_wheel.py dist/*.whl
       - uses: actions/upload-artifact@v6
         with:
           name: dist-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
