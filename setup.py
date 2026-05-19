@@ -8,44 +8,73 @@ from setuptools import setup
 from pybind11.setup_helpers import Pybind11Extension, build_ext as _pybind11_build_ext
 
 
+_CXX_STD_FLAGS = ("/std:c++17", "-std=c++17")
+
+
+def _split_cxx_std_flags(args: list[str]) -> tuple[list[str], list[str]]:
+    """Move -std=c++* / /std:c++* flags out so they are not passed to C sources."""
+    base: list[str] = []
+    cxx_only: list[str] = []
+    for flag in args:
+        if flag in _CXX_STD_FLAGS or flag.startswith("-std=c++") or flag.startswith("/std:c++"):
+            cxx_only.append(flag)
+        else:
+            base.append(flag)
+    return base, cxx_only
+
+
 class build_ext(_pybind11_build_ext):
     """Apply C++ standard only to C++ sources; grammar .c files must compile as C."""
 
-    def compile(self, sources, output_dir=None, macros=None, include_dirs=None, debug=0,
-                extra_preargs=None, extra_postargs=None, depends=None, **kwargs):
-        extra_postargs = list(extra_postargs or [])
-        c_sources = [s for s in sources if str(s).endswith(".c")]
-        cxx_sources = [s for s in sources if s not in c_sources]
+    def build_extensions(self) -> None:
+        if self.compiler is None:
+            super().build_extensions()
+            return
 
-        if sys.platform == "win32":
-            cxx_std_flag = "/std:c++17"
-        else:
-            cxx_std_flag = "-std=c++17"
+        orig_compile = self.compiler.compile
 
-        c_postargs = [a for a in extra_postargs if a != cxx_std_flag and a != "/std:c++17"]
-        cxx_postargs = list(extra_postargs)
-        if cxx_std_flag not in cxx_postargs:
-            cxx_postargs.append(cxx_std_flag)
+        def compile_with_cxx_std_only_on_cpp(sources, *args, **kwargs):
+            extra_preargs = list(kwargs.pop("extra_preargs", None) or [])
+            extra_postargs = list(kwargs.pop("extra_postargs", None) or [])
+            pre_base, pre_cxx = _split_cxx_std_flags(extra_preargs)
+            post_base, post_cxx = _split_cxx_std_flags(extra_postargs)
+            cxx_std = "-std=c++17" if sys.platform != "win32" else "/std:c++17"
 
-        common = dict(
-            output_dir=output_dir,
-            macros=macros,
-            include_dirs=include_dirs,
-            debug=debug,
-            extra_preargs=extra_preargs,
-            depends=depends,
-            **kwargs,
-        )
-        objects = []
-        if c_sources:
-            objects.extend(
-                super().compile(c_sources, extra_postargs=c_postargs, **common)
-            )
-        if cxx_sources:
-            objects.extend(
-                super().compile(cxx_sources, extra_postargs=cxx_postargs, **common)
-            )
-        return objects
+            c_sources = [s for s in sources if str(s).endswith(".c")]
+            cxx_sources = [s for s in sources if s not in c_sources]
+            objects = []
+            common = dict(kwargs)
+            if c_sources:
+                objects.extend(
+                    orig_compile(
+                        c_sources,
+                        *args,
+                        extra_preargs=pre_base,
+                        extra_postargs=post_base,
+                        **common,
+                    )
+                )
+            if cxx_sources:
+                cxx_pre = pre_base + pre_cxx
+                cxx_post = post_base + post_cxx
+                if cxx_std not in cxx_pre and cxx_std not in cxx_post:
+                    cxx_post = cxx_post + [cxx_std]
+                objects.extend(
+                    orig_compile(
+                        cxx_sources,
+                        *args,
+                        extra_preargs=cxx_pre,
+                        extra_postargs=cxx_post,
+                        **common,
+                    )
+                )
+            return objects
+
+        self.compiler.compile = compile_with_cxx_std_only_on_cpp
+        try:
+            super().build_extensions()
+        finally:
+            self.compiler.compile = orig_compile
 
 ROOT = Path(__file__).resolve().parent
 
