@@ -19,8 +19,8 @@ def _load_native_get_parser() -> Callable[[str], Any]:
         return _native_get_parser
     except ImportError as exc:
         raise ImportError(
-            "devops.tree_sitter 原生扩展未安装。请先执行 "
-            "bash scripts/vendor_tree_sitter.sh，再运行 pip install -e ."
+            "devops.tree_sitter native extension is not installed. "
+            "Run: python scripts/ensure_vendor_tree_sitter.py && pip install -e ."
         ) from exc
 
 

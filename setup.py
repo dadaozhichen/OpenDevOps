@@ -5,7 +5,47 @@ import sys
 from pathlib import Path
 
 from setuptools import setup
-from pybind11.setup_helpers import Pybind11Extension, build_ext
+from pybind11.setup_helpers import Pybind11Extension, build_ext as _pybind11_build_ext
+
+
+class build_ext(_pybind11_build_ext):
+    """Apply C++ standard only to C++ sources; grammar .c files must compile as C."""
+
+    def compile(self, sources, output_dir=None, macros=None, include_dirs=None, debug=0,
+                extra_preargs=None, extra_postargs=None, depends=None, **kwargs):
+        extra_postargs = list(extra_postargs or [])
+        c_sources = [s for s in sources if str(s).endswith(".c")]
+        cxx_sources = [s for s in sources if s not in c_sources]
+
+        if sys.platform == "win32":
+            cxx_std_flag = "/std:c++17"
+        else:
+            cxx_std_flag = "-std=c++17"
+
+        c_postargs = [a for a in extra_postargs if a != cxx_std_flag and a != "/std:c++17"]
+        cxx_postargs = list(extra_postargs)
+        if cxx_std_flag not in cxx_postargs:
+            cxx_postargs.append(cxx_std_flag)
+
+        common = dict(
+            output_dir=output_dir,
+            macros=macros,
+            include_dirs=include_dirs,
+            debug=debug,
+            extra_preargs=extra_preargs,
+            depends=depends,
+            **kwargs,
+        )
+        objects = []
+        if c_sources:
+            objects.extend(
+                super().compile(c_sources, extra_postargs=c_postargs, **common)
+            )
+        if cxx_sources:
+            objects.extend(
+                super().compile(cxx_sources, extra_postargs=cxx_postargs, **common)
+            )
+        return objects
 
 ROOT = Path(__file__).resolve().parent
 
@@ -28,18 +68,23 @@ fetch_vendor = _vendor_fetch.fetch_vendor
 def ensure_vendor() -> None:
     if vendor_ready():
         return
-    print("tree-sitter vendor 缺失，正在自动拉取（需要 git 与网络）...", file=sys.stderr)
+    print(
+        "tree-sitter vendor missing; fetching via git (network required)...",
+        file=sys.stderr,
+    )
     try:
         fetch_vendor()
     except (FileNotFoundError, subprocess.CalledProcessError) as exc:
         sys.stderr.write(
-            "错误: 无法自动拉取 tree-sitter grammar。\n"
-            "请安装 git 后重试，或手动执行: python scripts/ensure_vendor_tree_sitter.py\n"
-            f"详情: {exc}\n"
+            "error: failed to fetch tree-sitter grammars.\n"
+            "Install git and retry, or run: python scripts/ensure_vendor_tree_sitter.py\n"
+            f"details: {exc}\n"
         )
         raise SystemExit(1) from exc
     if not vendor_ready():
-        sys.stderr.write("错误: vendor 拉取后仍不完整，请检查网络或手动运行 vendor 脚本。\n")
+        sys.stderr.write(
+            "error: vendor still incomplete after fetch; check network or run vendor script.\n"
+        )
         raise SystemExit(1)
 
 
@@ -91,7 +136,7 @@ ext_modules = [
             *_ts_sources,
         ],
         include_dirs=_ts_include_dirs,
-        cxx_std=17,
+        # cxx_std applies to all sources; grammar .c files need a plain C compiler.
         extra_compile_args=_ts_compile,
         extra_link_args=_link_args,
     ),

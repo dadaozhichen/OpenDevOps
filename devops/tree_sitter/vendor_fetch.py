@@ -1,7 +1,8 @@
-"""构建前拉取 tree-sitter 核心与各语言 grammar（供 setup.py / CI 调用）。"""
+"""Fetch tree-sitter core and grammar sources before build (setup.py / CI)."""
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -9,9 +10,8 @@ from pathlib import Path
 
 VENDOR_ROOT = Path(__file__).resolve().parent / "vendor"
 
-# (目录名, git URL, tag/branch) — 须为仓库中真实存在的 tag（见 git ls-remote --tags）
+# (dir name, git URL, tag/branch) — must exist on remote (git ls-remote --tags)
 REPOS: tuple[tuple[str, str, str], ...] = (
-    # PyPI tree-sitter 0.21.x 对应 C 库 v0.21.0；无 v0.21.3 的 git tag
     ("tree-sitter", "https://github.com/tree-sitter/tree-sitter.git", "v0.21.0"),
     ("tree-sitter-python", "https://github.com/tree-sitter/tree-sitter-python.git", "v0.21.0"),
     ("tree-sitter-javascript", "https://github.com/tree-sitter/tree-sitter-javascript.git", "v0.21.0"),
@@ -29,9 +29,31 @@ REPOS: tuple[tuple[str, str, str], ...] = (
     ("tree-sitter-bash", "https://github.com/tree-sitter/tree-sitter-bash.git", "v0.21.0"),
 )
 
+_GIT_QUIET = ["-c", "advice.detachedHead=false"]
+
+
+def _git_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env.setdefault("GIT_TERMINAL_PROMPT", "0")
+    return env
+
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> None:
-    subprocess.run(cmd, cwd=cwd, check=True)
+    if cmd and cmd[0] == "git":
+        cmd = ["git", *_GIT_QUIET, *cmd[1:]]
+    subprocess.run(
+        cmd,
+        cwd=cwd,
+        check=True,
+        env=_git_env(),
+    )
+
+
+def _strip_git_metadata(dest: Path) -> None:
+    """Vendor only needs sources; remove .git to avoid detached-HEAD noise in CI logs."""
+    git_dir = dest / ".git"
+    if git_dir.exists():
+        shutil.rmtree(git_dir)
 
 
 def _repo_marker(name: str, dest: Path) -> Path:
@@ -55,32 +77,32 @@ def _clone_repo(name: str, url: str, ref: str) -> None:
 
     print(f"==> clone {name} @ {ref}", flush=True)
 
-    # 1) 浅克隆指定 branch/tag（多数 v* tag 可用）
     try:
         _run(["git", "clone", "--depth", "1", "--branch", ref, url, str(dest)])
+        _strip_git_metadata(dest)
         return
     except subprocess.CalledProcessError:
         if dest.exists():
             shutil.rmtree(dest)
 
-    # 2) 浅克隆后 fetch 指定 tag（部分仓库 tag 不能用作 --branch）
     _run(["git", "clone", "--depth", "1", url, str(dest)])
     try:
         _run(["git", "fetch", "--depth", "1", "origin", f"tag {ref}"], cwd=dest)
-        _run(["git", "checkout", "-q", "FETCH_HEAD"], cwd=dest)
+        _run(["git", "checkout", "-q", "--detach", "FETCH_HEAD"], cwd=dest)
+        _strip_git_metadata(dest)
         return
     except subprocess.CalledProcessError:
         if dest.exists():
             shutil.rmtree(dest)
 
-    # 3) 直接 fetch ref
     _run(["git", "clone", "--depth", "1", url, str(dest)])
     _run(["git", "fetch", "--depth", "1", "origin", ref], cwd=dest)
-    _run(["git", "checkout", "-q", "FETCH_HEAD"], cwd=dest)
+    _run(["git", "checkout", "-q", "--detach", "FETCH_HEAD"], cwd=dest)
+    _strip_git_metadata(dest)
 
 
 def fetch_vendor() -> None:
-    """拉取全部 vendor；需要本机已安装 git 且能访问 GitHub。"""
+    """Fetch all vendor trees. Requires git and network access to GitHub."""
     for name, url, ref in REPOS:
         _clone_repo(name, url, ref)
 
@@ -89,12 +111,12 @@ def main() -> int:
     try:
         fetch_vendor()
     except FileNotFoundError:
-        print("错误: 未找到 git，请先安装 git", file=sys.stderr)
+        print("error: git not found; install git first", file=sys.stderr)
         return 1
     except subprocess.CalledProcessError as exc:
-        print(f"错误: 拉取 vendor 失败: {exc}", file=sys.stderr)
+        print(f"error: failed to fetch vendor: {exc}", file=sys.stderr)
         return 1
-    print(f"Vendor 已就绪: {VENDOR_ROOT}")
+    print(f"vendor ready: {VENDOR_ROOT}")
     return 0
 
 

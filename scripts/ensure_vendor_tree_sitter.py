@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""构建前确保 tree-sitter vendor 存在（CI / 本地 pip install 均可调用）。"""
+"""Ensure tree-sitter vendor exists before build (CI / local pip install)."""
 
 from __future__ import annotations
 
@@ -16,13 +16,13 @@ from devops.tree_sitter.vendor_fetch import fetch_vendor
 
 def main() -> int:
     if vendor_ready():
-        print("tree-sitter vendor 已存在，跳过拉取")
+        print("tree-sitter vendor already present, skip fetch")
         return 0
     fetch_vendor()
     if not vendor_ready():
-        print("错误: vendor 拉取后仍不完整", file=sys.stderr)
+        print("error: vendor incomplete after fetch", file=sys.stderr)
         return 1
-    print("tree-sitter vendor 已就绪")
+    print("tree-sitter vendor ready")
     return 0
 
 

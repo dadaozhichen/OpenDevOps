@@ -24,6 +24,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Vendor tree-sitter grammars
+        env:
+          PYTHONUTF8: "1"
         run: python scripts/ensure_vendor_tree_sitter.py
       - run: pip install "build>=1.2.0"
       - run: python -m build -s -o dist
@@ -45,6 +47,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Vendor tree-sitter grammars
+        env:
+          PYTHONUTF8: "1"
         run: python scripts/ensure_vendor_tree_sitter.py
       - run: pip install "build>=1.2.0" "pybind11>=2.11"
       - run: python -m build -w -o dist
