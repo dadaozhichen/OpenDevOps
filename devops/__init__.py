@@ -1,3 +1,3 @@
-"""Devops：扫描源码、提取代码块、大模型分析并生成 README。"""
+"""Devops: scan source, extract blocks, LLM analysis, and README generation."""
 
 __version__ = "0.1.4"

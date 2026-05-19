@@ -1,4 +1,4 @@
-"""OpenAI 及兼容 OpenAI 协议的服务（DeepSeek、Moonshot、本地 Ollama 等）。"""
+"""OpenAI and OpenAI-compatible APIs (DeepSeek, Moonshot, Ollama, etc.)."""
 
 from __future__ import annotations
 

@@ -11,12 +11,12 @@ namespace fs = std::filesystem;
 
 namespace {
 
-// Python 传入 UTF-8 路径，各平台统一用 u8path 解析
+// Python passes UTF-8 paths; use u8path on all platforms
 fs::path toPath(const std::string& utf8Path) {
     return fs::u8path(utf8Path);
 }
 
-// 返回统一使用正斜杠的路径，便于跨平台在 Python 中使用
+// Return forward-slash paths for cross-platform use in Python
 std::string toGenericPath(const fs::path& path) {
     return path.generic_string();
 }
@@ -45,7 +45,7 @@ bool shouldSkipDir(const fs::path& dir) {
         "build", "dist", "out", "target", "bin", "obj",
         ".idea", ".vscode", ".vs",
         "__pycache__", ".next", ".venv", "venv", "env",
-        // Windows / MSVC 常见输出目录
+        // Common Windows / MSVC build output dirs
         "Debug", "Release", "x64", "Win32", "CMakeFiles",
     };
 

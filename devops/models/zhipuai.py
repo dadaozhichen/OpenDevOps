@@ -1,4 +1,4 @@
-"""智谱 AI (GLM) 模型。"""
+"""Zhipu AI (GLM) model client."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ class ZhipuAIChatModel(BaseChatModel):
         try:
             from zhipuai import ZhipuAI
         except ImportError as exc:
-            raise ImportError("使用智谱 AI 需要安装: pip install zhipuai") from exc
+            raise ImportError("Zhipu AI requires: pip install zhipuai") from exc
 
         self._client = ZhipuAI(api_key=config.api_key)
 

@@ -1,4 +1,4 @@
-"""用户模型 API 配置（~/.devops/config.json）。"""
+"""User model API configuration (~/.devops/config.json)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any, Optional
 CONFIG_DIR = Path.home() / ".devops"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
-# provider -> (默认模型, 环境变量 API Key 备选名, 环境变量 Base URL 备选名)
+# provider -> (default model, API key env names, base URL env names)
 PROVIDER_DEFAULTS: dict[str, dict[str, Any]] = {
     "openai": {
         "model": "gpt-4o-mini",
@@ -61,7 +61,7 @@ class ModelConfig:
             "provider": self.provider,
             "api_key": masked_key,
             "model": self.model,
-            "base_url": self.base_url or "(默认)",
+            "base_url": self.base_url or "(default)",
         }
 
 
@@ -108,7 +108,7 @@ def load_config(
     model: Optional[str] = None,
     base_url: Optional[str] = None,
 ) -> ModelConfig:
-    """加载配置：CLI 参数 > 配置文件 > 环境变量。"""
+    """Load config: CLI args > config file > environment variables."""
     file_data = load_config_file() or {}
 
     resolved_provider = (
@@ -120,7 +120,7 @@ def load_config(
 
     if resolved_provider not in PROVIDER_DEFAULTS:
         supported = ", ".join(list_providers())
-        raise ValueError(f"不支持的模型提供商: {resolved_provider}，可选: {supported}")
+        raise ValueError(f"Unsupported provider: {resolved_provider}. Choose: {supported}")
 
     defaults = PROVIDER_DEFAULTS[resolved_provider]
 
@@ -129,8 +129,8 @@ def load_config(
         resolved_api_key = _first_env(defaults["api_key_env"]) or ""
     if not resolved_api_key:
         raise RuntimeError(
-            "未配置 API Key。请先运行: devops config\n"
-            f"或设置环境变量: {defaults['api_key_env'][0]}"
+            "API Key not configured. Run: devops config\n"
+            f"Or set environment variable: {defaults['api_key_env'][0]}"
         )
 
     resolved_model = (

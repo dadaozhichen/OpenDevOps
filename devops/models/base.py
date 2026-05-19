@@ -1,4 +1,4 @@
-"""大模型调用抽象基类。"""
+"""Abstract base class for chat model clients."""
 
 from __future__ import annotations
 

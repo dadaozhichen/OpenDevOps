@@ -1,4 +1,4 @@
-"""devops config 子命令：交互式配置模型 API。"""
+"""devops config subcommand: interactive model API setup."""
 
 from __future__ import annotations
 
@@ -27,31 +27,31 @@ def run_config_show() -> int:
         config = load_config()
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
-        print(f"\n配置文件路径: {CONFIG_FILE}", file=sys.stderr)
+        print(f"\nConfig file: {CONFIG_FILE}", file=sys.stderr)
         return 1
 
-    print("当前模型配置:")
+    print("Current model config:")
     for key, value in config.masked().items():
         print(f"  {key}: {value}")
-    print(f"\n配置文件: {CONFIG_FILE}")
+    print(f"\nConfig file: {CONFIG_FILE}")
     return 0
 
 
 def run_config_interactive() -> int:
     providers = list_providers()
-    print("支持的模型提供商:")
+    print("Supported providers:")
     for i, name in enumerate(providers, 1):
         print(f"  {i}. {name}")
     print()
 
-    provider = _prompt("提供商 (openai/zhipuai/deepseek/moonshot)", "openai").lower()
+    provider = _prompt("Provider (openai/zhipuai/deepseek/moonshot)", "openai").lower()
     if provider not in providers:
-        print(f"错误: 未知提供商 {provider}", file=sys.stderr)
+        print(f"Error: unknown provider {provider}", file=sys.stderr)
         return 1
 
-    api_key = getpass.getpass("API Key (输入不可见): ").strip()
+    api_key = getpass.getpass("API Key (hidden): ").strip()
     if not api_key:
-        print("错误: API Key 不能为空", file=sys.stderr)
+        print("Error: API Key cannot be empty", file=sys.stderr)
         return 1
 
     default_models = {
@@ -60,13 +60,14 @@ def run_config_interactive() -> int:
         "deepseek": "deepseek-chat",
         "moonshot": "moonshot-v1-8k",
     }
-    model = _prompt("模型名称", default_models.get(provider, "gpt-4o-mini"))
+    model = _prompt("Model name", default_models.get(provider, "gpt-4o-mini"))
 
     base_url = ""
     if provider in ("openai",):
-        base_url = _prompt("Base URL (留空=官方 OpenAI)", "")
+        base_url = _prompt("Base URL (empty = official OpenAI)", "")
     elif provider in ("deepseek", "moonshot"):
         from devops.config import PROVIDER_DEFAULTS
+
         default_url = PROVIDER_DEFAULTS[provider]["base_url"] or ""
         base_url = _prompt("Base URL", default_url)
 
@@ -77,8 +78,8 @@ def run_config_interactive() -> int:
         base_url=base_url or None,
     )
     path = save_config(config)
-    print(f"\n配置已保存: {path}")
-    print("现在可以运行: devops /path/to/your/project")
+    print(f"\nConfig saved: {path}")
+    print("You can now run: devops /path/to/your/project")
     return 0
 
 

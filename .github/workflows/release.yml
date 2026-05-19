@@ -1,10 +1,10 @@
-# 推送以 v 开头的 tag（如 v0.1.5）时：
-# 1) 在 CI 中预编译 scan_native / tree_sitter_native，打出各平台 wheel + 一份 sdist
-# 2) 创建 GitHub Release 并上传制品（用户 pip 安装 wheel 无需本地 MSVC）
-# 3) Release 成功后发布到 PyPI
+# On push of a v* tag (e.g. v0.1.5):
+# 1) Prebuild scan_native / tree_sitter_native; wheels per platform + one sdist
+# 2) Create GitHub Release and upload artifacts (pip install wheel needs no local MSVC)
+# 3) Publish to PyPI after Release succeeds
 #
-# PyPI 配置：在 https://pypi.org/manage/account/publishing/ 为项目添加 Trusted Publisher，
-# 类型选 GitHub，填写本仓库的 owner/name，工作流选 Release（本文件），环境名留空（除非下面 job 加了 environment）。
+# PyPI: add a Trusted Publisher at https://pypi.org/manage/account/publishing/
+# Type GitHub, this repo owner/name, workflow file Release, environment empty unless you add one below.
 name: Release
 
 on:
@@ -54,8 +54,8 @@ jobs:
         run: pip install "build>=1.2.0" "pybind11>=2.11"
       - name: Prebuild wheel (native extensions)
         run: python -m build -w -o dist
-      # PyPI 拒绝裸 linux_x86_64，须 manylinux_*（PEP 600）
-      - name: Linux wheel → manylinux（PyPI 要求）
+      # PyPI rejects bare linux_x86_64; require manylinux_* (PEP 600)
+      - name: Linux wheel to manylinux (PyPI)
         if: runner.os == 'Linux'
         run: |
           pip install auditwheel
@@ -64,6 +64,8 @@ jobs:
           rm -f dist/*.whl
           mv wheelhouse/*.whl dist/
       - name: Verify prebuilt native modules in wheel
+        env:
+          PYTHONUTF8: "1"
         shell: bash
         run: python scripts/verify_wheel.py dist/*.whl
       - uses: actions/upload-artifact@v6
@@ -103,5 +105,5 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
-          # 未配置 PyPI Trusted Publisher 时，可临时改用 API Token：
+          # Without PyPI Trusted Publisher, use API token instead:
           # password: ${{ secrets.PYPI_API_TOKEN }}

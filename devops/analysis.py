@@ -1,4 +1,4 @@
-"""调用大模型 API 分析 extract 提取的代码块。"""
+"""Analyze code blocks extracted by Tree-sitter via LLM APIs."""
 
 from __future__ import annotations
 
@@ -14,79 +14,79 @@ from devops.ui import thinking
 MAX_CODE_LINES = 80
 MAX_CHARS_PER_REQUEST = 24_000
 
-SYSTEM_PROMPT = """你是一名资深技术文档工程师，擅长从代码和项目结构中提炼出清晰、实用的技术文档。
+SYSTEM_PROMPT = """You are a senior technical writer who produces clear, practical documentation from code and project structure.
 
-## 输入说明
-- 用户提供的是 Tree-sitter 提取的代码块（函数、类、方法等），通常不是完整仓库。
-- 单块源码可能被截断（约 80 行以内），省略处会标注。
-- 可能缺少完整目录树、部署脚本或配置文件正文；不得编造，无法确认时写「需结合仓库补充」或「根据代码推断（待确认）」。
+## Input
+- The user provides Tree-sitter code blocks (functions, classes, methods, etc.), usually not a full repository.
+- Each block may be truncated (about 80 lines); omissions are marked.
+- Directory trees, deploy scripts, or full config files may be missing. Do not invent facts; when unsure, write "needs verification in repo" or "inferred (unconfirmed)".
 
-## 通用输出要求
-1. 使用 Markdown，简体中文，专业、客观、条理清晰。
-2. 不要大段粘贴源码；最多引用函数/方法签名（例如 `def create_user(name: str) -> int`）。
-3. 对公共 API（对外导出的函数、类、CLI 入口）优先用表格：名称 | 参数 | 返回值 | 说明。
-4. 区分「事实」（代码中可见）与「推断」（架构意图、部署方式）。
-5. 具体章节结构以用户消息中的任务说明为准；单文件分析不写整篇项目 README，项目级总览再写完整章节。
+## Output rules
+1. Use Markdown in English; be professional, objective, and structured.
+2. Do not paste large code chunks; at most quote signatures (e.g. `def create_user(name: str) -> int`).
+3. For public APIs (exported functions, classes, CLI entrypoints), prefer tables: Name | Parameters | Returns | Description.
+4. Separate facts (visible in code) from inferences (architecture intent, deployment).
+5. Follow the task structure in the user message; per-file analysis is not a full project README unless asked.
 
-## 禁止
-- 虚构不存在的模块、环境变量、命令或依赖。"""
+## Forbidden
+- Fabricating modules, environment variables, commands, or dependencies that are not supported by the input."""
 
-FILE_ANALYSIS_PROMPT_PREFIX = """请分析以下源文件中的代码块，输出 Markdown（不要外层 # 标题，从 ### 小节开始）。
+FILE_ANALYSIS_PROMPT_PREFIX = """Analyze the code blocks for the source file below. Output Markdown (no outer # title; start at ### sections).
 
-必须包含：
-### 职责概述
-本文件在项目中的作用（1–3 句）。
+Required sections:
+### Overview
+What this file does in the project (1–3 sentences).
 
-### 主要符号
-列出重要的类、函数、常量；对公共接口用表格（名称 | 参数 | 返回值 | 说明）。
+### Main symbols
+Important classes, functions, and constants; use a table for public APIs (Name | Parameters | Returns | Description).
 
-### 依赖与调用
-本文件依赖的项目内模块或第三方库（仅从代码块可见部分归纳）。
+### Dependencies and calls
+In-project modules and third-party libraries visible from the blocks.
 
-### 配置与安全
-若出现配置、密钥、路径相关逻辑则简要说明；否则写「本文件未体现」。
+### Configuration and security
+Brief notes on config, secrets, or paths if present; otherwise write "Not shown in this file".
 
-### 注意事项
-至少 1 条边界情况、潜在风险或改进点；无明显问题时写「未发现明显问题」。
+### Notes
+At least one edge case, risk, or improvement; if none, write "No obvious issues found".
 
-若本文件几乎是项目唯一核心文件，可在末尾增加 ### 项目补充，用 3–5 条要点概括安装/运行/架构（能推断则写，否则标待补充）。
+If this file is effectively the whole project, add ### Project notes with 3–5 bullets on install/run/architecture (mark gaps as TBD).
 
 ---
 """
 
-OVERVIEW_PROMPT_PREFIX = """以下是多个源文件的逐项分析。请生成项目级 Markdown 总览（将写入 README 的「概览」一节）。
+OVERVIEW_PROMPT_PREFIX = """Below are per-file analyses. Produce a project-level Markdown overview (for the README "Overview" section).
 
-必须按顺序包含以下章节（使用 ## 标题）：
+Include these sections in order (use ## headings):
 
-## 项目概述
-一句话定位 + 核心能力列表（3–6 条）。
+## Project summary
+One-line positioning plus 3–6 core capabilities.
 
-## 快速开始
-安装、配置、最小运行示例；信息不足时列出「待补充」项。
+## Quick start
+Install, configure, and minimal run; list TBD items when information is missing.
 
-## 架构设计
-模块划分与核心数据流（可用 Mermaid 代码块）。
+## Architecture
+Module layout and data flow (Mermaid allowed).
 
-## 模块与文件关系
-各目录/文件如何协作；归纳即可，勿重复粘贴各文件分析全文。
+## Modules and files
+How directories/files work together; summarize, do not repeat full per-file text.
 
-## 配置说明
-汇总配置项、环境变量、配置文件路径。
+## Configuration
+Config keys, environment variables, and config file paths.
 
-## 依赖关系
-关键第三方库与项目内模块依赖（归纳，不罗列依赖文件全文）。
+## Dependencies
+Key third-party and in-project dependencies (summary only).
 
-## 部署与运维
-构建、启动、日志/输出要点；无法推断则标明「需补充」。
+## Deployment and operations
+Build, start, logging/output; mark unknowns as TBD.
 
-## 常见问题与注意事项
-至少 2 条潜在坑点、扫描/分析范围限制或工具约束。
+## FAQ and caveats
+At least two pitfalls, scan limits, or tool constraints.
 
-## 架构与质量建议
-共性问题或改进建议（3–5 条，可选）。
+## Architecture and quality
+3–5 cross-cutting suggestions (optional).
 
 ---
-逐项分析如下：
+Per-file analyses:
 
 """
 
@@ -96,7 +96,7 @@ def _truncate_code(code: str, max_lines: int = MAX_CODE_LINES) -> str:
     if len(lines) <= max_lines:
         return code
     head = "\n".join(lines[:max_lines])
-    return f"{head}\n# ... (省略 {len(lines) - max_lines} 行)"
+    return f"{head}\n# ... ({len(lines) - max_lines} lines omitted)"
 
 
 def _format_blocks_for_prompt(blocks: list[CodeBlock]) -> str:
@@ -104,7 +104,7 @@ def _format_blocks_for_prompt(blocks: list[CodeBlock]) -> str:
     for i, block in enumerate(blocks, 1):
         title = block.name or "(anonymous)"
         parts.append(
-            f"### 块 {i}: {block.block_type} `{title}` "
+            f"### Block {i}: {block.block_type} `{title}` "
             f"(L{block.start_line}-L{block.end_line})\n"
             f"```{block.language}\n{_truncate_code(block.code)}\n```"
         )
@@ -124,7 +124,7 @@ def analyze_blocks(
     model_name: Optional[str] = None,
     base_url: Optional[str] = None,
 ) -> dict[str, Any]:
-    """按文件分批调用大模型，并生成总览。"""
+    """Call the LLM per file and build a project overview."""
     chat_model = get_chat_model(
         provider=provider,
         api_key=api_key,
@@ -134,7 +134,7 @@ def analyze_blocks(
 
     if not blocks:
         return {
-            "summary": "未提取到任何代码块，请确认目录内有支持的源码文件。",
+            "summary": "No code blocks extracted. Ensure the directory contains supported source files.",
             "files": [],
             "blocks_count": 0,
         }
@@ -149,13 +149,13 @@ def analyze_blocks(
     for file_path, file_blocks in sorted(by_file.items()):
         body = _format_blocks_for_prompt(file_blocks)
         if len(body) > MAX_CHARS_PER_REQUEST:
-            body = body[:MAX_CHARS_PER_REQUEST] + "\n\n...(内容过长已截断)"
+            body = body[:MAX_CHARS_PER_REQUEST] + "\n\n...(truncated: content too long)"
 
         prompt = (
             f"{FILE_ANALYSIS_PROMPT_PREFIX}"
-            f"文件路径: {file_path}\n"
-            f"语言: {file_blocks[0].language}\n"
-            f"代码块数量: {len(file_blocks)}\n\n"
+            f"File path: {file_path}\n"
+            f"Language: {file_blocks[0].language}\n"
+            f"Block count: {len(file_blocks)}\n\n"
             f"{body}"
         )
         analysis = _chat(chat_model, prompt)
@@ -166,11 +166,11 @@ def analyze_blocks(
                 "analysis": analysis,
             }
         )
-        file_summaries.append(f"【{file_path}】\n{analysis}")
+        file_summaries.append(f"[{file_path}]\n{analysis}")
 
     overview_prompt = OVERVIEW_PROMPT_PREFIX + "\n\n---\n\n".join(file_summaries)
     if len(overview_prompt) > MAX_CHARS_PER_REQUEST:
-        overview_prompt = overview_prompt[:MAX_CHARS_PER_REQUEST] + "\n...(已截断)"
+        overview_prompt = overview_prompt[:MAX_CHARS_PER_REQUEST] + "\n...(truncated)"
 
     summary = (
         _chat(chat_model, overview_prompt)
@@ -196,7 +196,7 @@ def analyze_files(
     model_name: Optional[str] = None,
     base_url: Optional[str] = None,
 ) -> dict[str, Any]:
-    """从文件路径列表提取代码块并分析。"""
+    """Extract blocks from paths and analyze them."""
     blocks = extract_blocks_from_paths(paths)
     return analyze_blocks(
         blocks,
@@ -215,7 +215,7 @@ def analyze_folder(
     model_name: Optional[str] = None,
     base_url: Optional[str] = None,
 ) -> dict[str, Any]:
-    """扫描目录、提取代码块并分析。"""
+    """Scan a directory, extract blocks, and analyze."""
     from devops.scan import scan_code_files
 
     folder_path = Path(folder).resolve()
@@ -235,7 +235,7 @@ def analyze_folder(
 
 
 def render_readme(result: dict[str, Any]) -> str:
-    """将分析结果渲染为 README Markdown 正文。"""
+    """Render analysis result as README Markdown."""
     project = result.get("project_name") or Path(result.get("folder", ".")).name
     folder = result.get("folder", "")
     generated_at = result.get("generated_at", "")
@@ -248,27 +248,27 @@ def render_readme(result: dict[str, Any]) -> str:
     lines: list[str] = [
         f"# {project}",
         "",
-        "> 本文档由代码分析工具自动生成。",
+        "> Auto-generated by Devops code analyzer.",
         "",
-        "## 概览",
+        "## Overview",
         "",
-        summary or "_暂无分析内容。_",
+        summary or "_No analysis content._",
         "",
-        "## 统计",
+        "## Statistics",
         "",
-        "| 指标 | 数值 |",
+        "| Metric | Value |",
         "| --- | --- |",
-        f"| 项目路径 | `{folder}` |",
-        f"| 扫描文件数 | {scanned} |",
-        f"| 提取代码块数 | {blocks} |",
-        f"| 已分析文件数 | {files_count} |",
-        f"| 生成时间 | {generated_at} |",
-        f"| 分析模型 | {result.get('model_provider', '')} / {result.get('model_name', '')} |",
+        f"| Project path | `{folder}` |",
+        f"| Files scanned | {scanned} |",
+        f"| Code blocks extracted | {blocks} |",
+        f"| Files analyzed | {files_count} |",
+        f"| Generated at | {generated_at} |",
+        f"| Model | {result.get('model_provider', '')} / {result.get('model_name', '')} |",
         "",
     ]
 
     if per_file:
-        lines.extend(["## 文件分析", ""])
+        lines.extend(["## Per-file analysis", ""])
         for item in per_file:
             rel = item.get("file_path", "")
             if folder and rel.startswith(folder):
@@ -277,9 +277,9 @@ def render_readme(result: dict[str, Any]) -> str:
             analysis = (item.get("analysis") or "").strip()
             lines.append(f"### `{rel}`")
             lines.append("")
-            lines.append(f"- **代码块数量**: {count}")
+            lines.append(f"- **Code blocks**: {count}")
             lines.append("")
-            lines.append(analysis or "_无分析结果。_")
+            lines.append(analysis or "_No analysis result._")
             lines.append("")
 
     lines.append("---")
@@ -290,7 +290,7 @@ def render_readme(result: dict[str, Any]) -> str:
 
 
 def write_project_readme(folder: str, result: dict[str, Any], filename: str = "README.md") -> Path:
-    """将 Markdown 写入目标项目目录下的 README.md。"""
+    """Write Markdown to README.md under the target project directory."""
     folder_path = Path(folder).resolve()
     output_path = folder_path / filename
     markdown = render_readme(result)

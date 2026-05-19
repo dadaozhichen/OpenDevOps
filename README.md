@@ -1,11 +1,126 @@
 # Devops Analyzer
 
-扫描项目源码 → Tree-sitter 提取代码块 → 大模型分析 → 生成 `README.md`。
+**[English](#english)** · **[中文](#中文)**
 
-## 安装
+---
+
+<a id="english"></a>
+
+## English
+
+Scan project source → Tree-sitter code blocks → LLM analysis → `README.md`.
+
+### Install
 
 ```bash
-# 推荐：安装 PyPI 预编译 wheel（Release CI 已编译好原生扩展，Windows 无需 MSVC）
+# Recommended: PyPI prebuilt wheel (native extensions built in Release CI; no MSVC on Windows)
+pip install devops-analyzer
+
+# Or from source (fetches tree-sitter grammars and compiles locally; needs git + C++ toolchain)
+git clone https://github.com/dadaozhichen/OpenDevOps.git
+cd OpenDevOps
+pip install -e .
+
+# Optional: Zhipu AI
+pip install zhipuai
+```
+
+On tag push, GitHub Actions **prebuilds** `scan_native` and `tree_sitter_native` on Linux / macOS / Windows for Python 3.11–3.13 and uploads wheels.  
+`pip install devops-analyzer` prefers those wheels, so you usually **do not need to compile C++ locally**.
+
+Prebuilt `.whl` files are also on [GitHub Releases](https://github.com/dadaozhichen/OpenDevOps/releases):
+
+```bash
+pip install devops_analyzer-0.1.5-cp313-cp313-win_amd64.whl
+```
+
+**Python 3.13** installs `tree-sitter>=0.22` (prebuilt wheels on Windows, etc.). Python 3.12 and below use `tree-sitter 0.21.x`.
+
+#### Windows
+
+| Method | Requirements |
+|--------|----------------|
+| `pip install devops-analyzer` (PyPI / Release wheel) | Recommended; **no MSVC** |
+| `pip install -e .` or `pip install .` (sdist / source) | **Git**, **Microsoft C++ Build Tools** ([download](https://visualstudio.microsoft.com/visual-cpp-build-tools/)) |
+
+If pip builds from source (e.g. no wheel for your Python version), force binaries only:
+
+```bash
+pip install devops-analyzer --only-binary devops-analyzer
+```
+
+### First run: configure model API
+
+Configure your API key before analyzing a project:
+
+```bash
+devops config
+```
+
+Follow the prompts for provider, API key, and model. Config is stored in `~/.devops/config.json` (user-readable only).
+
+Show current config (masked API key):
+
+```bash
+devops config --show
+```
+
+### Supported providers
+
+| Provider | `provider` | Default model | Notes |
+|----------|------------|---------------|-------|
+| OpenAI | `openai` | `gpt-4o-mini` | Official or custom base URL |
+| Zhipu AI | `zhipuai` | `glm-4-flash` | `pip install zhipuai` |
+| DeepSeek | `deepseek` | `deepseek-chat` | OpenAI-compatible API |
+| Moonshot | `moonshot` | `moonshot-v1-8k` | OpenAI-compatible API |
+
+Environment variables (lower priority than config file):
+
+```bash
+export DEVOPS_PROVIDER=openai
+export DEVOPS_API_KEY=sk-...
+export DEVOPS_MODEL=gpt-4o-mini
+export DEVOPS_BASE_URL=https://api.openai.com/v1   # optional
+```
+
+### Analyze a project
+
+```bash
+devops /path/to/your/project
+
+# explicit subcommand
+devops analyze /path/to/your/project
+
+# custom output file
+devops /path/to/project -o README.md
+
+# override model without editing config
+devops /path/to/project --provider deepseek --model deepseek-chat
+```
+
+### Commands
+
+```bash
+devops config              # interactive API setup
+devops config --show       # show config
+devops <project-path>      # analyze and write README.md
+devops analyze <project-path>
+devops --help
+devops --version
+```
+
+---
+
+<a id="中文"></a>
+
+## 中文
+
+扫描项目源码 → Tree-sitter 提取代码块 → 大模型分析 → 生成 `README.md`。
+
+### 安装
+
+```bash
+# 推荐：安装 PyPI 预编译 wheel（Release CI 已编译原生扩展，Windows 一般无需 MSVC）
 pip install devops-analyzer
 
 # 或从源码安装（会自动拉取 tree-sitter grammar 并本地编译，需 git + C++ 编译器）
@@ -18,32 +133,32 @@ pip install zhipuai
 ```
 
 打 tag 发布时，GitHub Actions 会在 **Linux / macOS / Windows** 上为 Python 3.11–3.13 **预编译** `scan_native` 与 `tree_sitter_native` 并上传 wheel。  
-因此 `pip install devops-analyzer` 会优先安装这些 wheel，**一般不需要在本机编译 C++**。
+因此 `pip install devops-analyzer` 会优先安装这些 wheel，**通常不需要在本机编译 C++**。
 
-从 [GitHub Releases](https://github.com/dadaozhichen/OpenDevOps/releases) 下载的 `.whl` 同样为预编译包，可按平台与 Python 版本手动安装：
+也可从 [GitHub Releases](https://github.com/dadaozhichen/OpenDevOps/releases) 下载对应平台的 `.whl` 手动安装：
 
 ```bash
 pip install devops_analyzer-0.1.5-cp313-cp313-win_amd64.whl
 ```
 
-**Python 3.13**：会自动安装 `tree-sitter>=0.22`（带 Windows 等平台预编译 wheel）；3.12 及以下仍使用 `tree-sitter 0.21.x`。
+**Python 3.13** 会自动安装 `tree-sitter>=0.22`（Windows 等平台有预编译 wheel）；3.12 及以下使用 `tree-sitter 0.21.x`。
 
-### Windows 说明
+#### Windows
 
 | 安装方式 | 要求 |
 |----------|------|
 | `pip install devops-analyzer`（PyPI / Release 预编译 wheel） | 推荐，**无需**安装 MSVC |
-| `pip install -e .` 或 `pip install .`（仅 sdist / 源码） | 需 **Git**、**Microsoft C++ Build Tools**（[下载](https://visualstudio.microsoft.com/visual-cpp-build-tools/)） |
+| `pip install -e .` 或 `pip install .`（sdist / 源码） | 需 **Git**、**Microsoft C++ Build Tools**（[下载](https://visualstudio.microsoft.com/visual-cpp-build-tools/)） |
 
-若 pip 误从源码包编译（例如无对应 wheel 的 Python 版本），可指定仅装二进制包：
+若 pip 误从源码包编译（例如没有对应 Python 版本的 wheel），可强制只装二进制包：
 
 ```bash
 pip install devops-analyzer --only-binary devops-analyzer
 ```
 
-## 首次使用：配置模型 API
+### 首次使用：配置模型 API
 
-**必须先配置你自己的 API Key**，再分析项目：
+分析项目前请先配置 API Key：
 
 ```bash
 devops config
@@ -51,13 +166,13 @@ devops config
 
 按提示选择提供商、输入 API Key 和模型名称。配置保存在 `~/.devops/config.json`（仅当前用户可读）。
 
-查看当前配置（Key 脱敏显示）：
+查看当前配置（API Key 脱敏显示）：
 
 ```bash
 devops config --show
 ```
 
-## 支持的模型提供商
+### 支持的模型提供商
 
 | 提供商 | `provider` 值 | 默认模型 | 说明 |
 |--------|---------------|----------|------|
@@ -75,7 +190,7 @@ export DEVOPS_MODEL=gpt-4o-mini
 export DEVOPS_BASE_URL=https://api.openai.com/v1   # 可选
 ```
 
-## 分析项目
+### 分析项目
 
 ```bash
 devops /path/to/your/project
@@ -90,7 +205,7 @@ devops /path/to/project -o README.md
 devops /path/to/project --provider deepseek --model deepseek-chat
 ```
 
-## 命令一览
+### 命令一览
 
 ```bash
 devops config              # 交互式配置 API

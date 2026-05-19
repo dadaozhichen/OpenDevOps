@@ -1,4 +1,4 @@
-"""多模型提供商统一入口。"""
+"""Unified entry for multiple model providers."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from devops.models.base import BaseChatModel
 from devops.models.openai import OpenAIChatModel
 from devops.models.zhipuai import ZhipuAIChatModel
 
-# deepseek / moonshot 使用 OpenAI 兼容协议
+# deepseek / moonshot use OpenAI-compatible APIs
 _OPENAI_COMPAT = {"openai", "deepseek", "moonshot"}
 
 
@@ -20,7 +20,7 @@ def create_chat_model(config: ModelConfig) -> BaseChatModel:
   if provider == "zhipuai":
     return ZhipuAIChatModel(config)
   raise ValueError(
-    f"不支持的提供商: {provider}，可选: {', '.join(list_providers())}"
+    f"Unsupported provider: {provider}. Choose: {', '.join(list_providers())}"
   )
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# 与 setup.py 同级的项目根目录；setuptools 要求源路径为相对路径
+# Project root (sibling of setup.py); setuptools requires relative source paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 VENDOR_ROOT = Path(__file__).resolve().parent / "vendor"
 TREE_SITTER_CORE = VENDOR_ROOT / "tree-sitter"
@@ -29,7 +29,7 @@ GRAMMAR_DIRS = (
     "tree-sitter-typescript",
 )
 
-# 部分 grammar 仓库将 src 放在子目录（如新版 php/typescript）
+# Some grammar repos place src in subdirs (e.g. newer php/typescript)
 GRAMMAR_SRC_SUBDIRS: dict[str, tuple[str, ...]] = {
     "tree-sitter-php": ("php/src", "src"),
     "tree-sitter-typescript": ("typescript/src", "src"),
@@ -49,7 +49,7 @@ def vendor_ready() -> bool:
 def collect_sources() -> tuple[list[str], list[str]]:
     if not vendor_ready():
         raise FileNotFoundError(
-            "tree-sitter vendor 未就绪。请先运行: bash scripts/vendor_tree_sitter.sh"
+            "tree-sitter vendor not ready. Run: bash scripts/vendor_tree_sitter.sh"
         )
 
     sources: list[str] = []
@@ -71,7 +71,7 @@ def collect_sources() -> tuple[list[str], list[str]]:
                 break
         if parser_c is None:
             raise FileNotFoundError(
-                f"缺少 grammar 源文件 parser.c,已检查: {_grammar_src_dirs(grammar)}"
+                f"missing grammar parser.c, checked: {_grammar_src_dirs(grammar)}"
             )
         sources.append(_rel(parser_c))
         if (src_dir / "tree_sitter").is_dir():

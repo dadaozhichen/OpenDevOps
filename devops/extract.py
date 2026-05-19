@@ -1,4 +1,4 @@
-"""用 Tree-sitter 从源码文件中提取代码块。"""
+"""Extract code blocks from source files using Tree-sitter."""
 
 from __future__ import annotations
 

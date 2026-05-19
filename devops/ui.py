@@ -1,4 +1,4 @@
-"""终端 UI 辅助（等待动画等）。"""
+"""Terminal UI helpers (spinner, etc.)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ _SPINNER = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"
 
 @contextmanager
 def thinking(message: str = "thinking") -> Iterator[None]:
-    """在阻塞操作期间于 stderr 显示转圈与文案。"""
+    """Show a spinner and label on stderr while a blocking operation runs."""
     if not sys.stderr.isatty():
         print(f"{message}...", file=sys.stderr, flush=True)
         yield
