@@ -5,13 +5,18 @@
 ## 安装
 
 ```bash
-cd /path/to/Devops
-conda activate devops
+pip install devops-analyzer
+
+# 或从源码安装（会自动拉取 tree-sitter grammar 并编译原生扩展，需 git + C++ 编译器）
+git clone https://github.com/dadaozhichen/OpenDevOps.git
+cd OpenDevOps
 pip install -e .
 
 # 使用智谱 AI 时额外安装
 pip install zhipuai
 ```
+
+从 PyPI 安装的 **wheel** 已包含编译好的 `scan_native` 与 `tree_sitter_native`，可直接 `devops config` / `devops <项目路径>`。
 
 ## 首次使用：配置模型 API
 

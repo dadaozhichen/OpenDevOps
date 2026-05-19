@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - name: Vendor tree-sitter grammars
+        run: python scripts/ensure_vendor_tree_sitter.py
       - run: pip install "build>=1.2.0"
       - run: python -m build -s -o dist
       - uses: actions/upload-artifact@v6
@@ -42,7 +44,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install "build>=1.2.0"
+      - name: Vendor tree-sitter grammars
+        run: python scripts/ensure_vendor_tree_sitter.py
+      - run: pip install "build>=1.2.0" "pybind11>=2.11"
       - run: python -m build -w -o dist
       # PyPI 拒绝裸 linux_x86_64，须 manylinux_*（PEP 600）
       - name: Linux wheel → manylinux（PyPI 要求）

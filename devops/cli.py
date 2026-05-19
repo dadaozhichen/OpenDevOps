@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Optional
 
 from devops import __version__
-from devops.analysis import analyze_folder, write_project_readme
 from devops.config import config_exists
 from devops.config_cmd import run_config
 
@@ -128,6 +127,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
         return 1
 
     try:
+        from devops.analysis import analyze_folder, write_project_readme
         from devops.config import load_config
 
         cfg = load_config(

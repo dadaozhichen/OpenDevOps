@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterator, Optional, Union
-
-from tree_sitter import Node, Tree
-
-from devops.tree_sitter import get_parser
+from typing import TYPE_CHECKING, Iterator, Optional, Union
 
 from devops.scan import scan_code_files
+
+if TYPE_CHECKING:
+    from tree_sitter import Node, Tree
 
 EXT_TO_LANGUAGE: dict[str, str] = {
     ".py": "python",
@@ -187,6 +186,8 @@ def extract_blocks_from_file(path: Union[str, Path]) -> list[CodeBlock]:
         return []
 
     try:
+        from devops.tree_sitter import get_parser
+
         tree = get_parser(language).parse(source)
     except Exception:
         return []

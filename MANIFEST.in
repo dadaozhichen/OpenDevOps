@@ -1,3 +1,6 @@
 include LICENSE README.md requirements.txt
 include devops/scan/scan.h
 include devops/tree_sitter/languages.h
+include devops/tree_sitter/vendor_fetch.py
+include devops/tree_sitter/build_sources.py
+recursive-include devops/tree_sitter/vendor *
