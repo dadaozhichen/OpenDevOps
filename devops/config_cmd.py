@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import getpass
 import sys
+from typing import Optional
 
 from devops.config import (
     CONFIG_FILE,
@@ -81,7 +82,7 @@ def run_config_interactive() -> int:
     return 0
 
 
-def run_config(argv: list[str] | None = None) -> int:
+def run_config(argv: Optional[list[str]] = None) -> int:
     args = argv or []
     if "--show" in args or "-s" in args:
         return run_config_show()

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Optional
 
 from devops import __version__
 from devops.analysis import analyze_folder, write_project_readme
@@ -159,7 +160,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
         return 1
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     argv = list(argv) if argv is not None else sys.argv[1:]
 
     # devops /path/to/project -> 自动当作 analyze

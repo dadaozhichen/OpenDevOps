@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from devops.extract import CodeBlock, extract_blocks_from_paths
 from devops.models import BaseChatModel, get_chat_model
@@ -14,14 +14,81 @@ from devops.ui import thinking
 MAX_CODE_LINES = 80
 MAX_CHARS_PER_REQUEST = 24_000
 
-SYSTEM_PROMPT = """你是一名资深代码审查专家。
-请根据给出的代码块，输出简洁、结构化的中文分析，包含：
-1. 文件/模块职责概述
-2. 主要函数/类的作用
-3. 潜在问题或改进建议（如有）
-4. 关键依赖或调用关系（如能看出）
+SYSTEM_PROMPT = """你是一名资深技术文档工程师，擅长从代码和项目结构中提炼出清晰、实用的技术文档。
 
-直接输出分析正文，不要重复粘贴完整源码。"""
+## 输入说明
+- 用户提供的是 Tree-sitter 提取的代码块（函数、类、方法等），通常不是完整仓库。
+- 单块源码可能被截断（约 80 行以内），省略处会标注。
+- 可能缺少完整目录树、部署脚本或配置文件正文；不得编造，无法确认时写「需结合仓库补充」或「根据代码推断（待确认）」。
+
+## 通用输出要求
+1. 使用 Markdown，简体中文，专业、客观、条理清晰。
+2. 不要大段粘贴源码；最多引用函数/方法签名（例如 `def create_user(name: str) -> int`）。
+3. 对公共 API（对外导出的函数、类、CLI 入口）优先用表格：名称 | 参数 | 返回值 | 说明。
+4. 区分「事实」（代码中可见）与「推断」（架构意图、部署方式）。
+5. 具体章节结构以用户消息中的任务说明为准；单文件分析不写整篇项目 README，项目级总览再写完整章节。
+
+## 禁止
+- 虚构不存在的模块、环境变量、命令或依赖。"""
+
+FILE_ANALYSIS_PROMPT_PREFIX = """请分析以下源文件中的代码块，输出 Markdown（不要外层 # 标题，从 ### 小节开始）。
+
+必须包含：
+### 职责概述
+本文件在项目中的作用（1–3 句）。
+
+### 主要符号
+列出重要的类、函数、常量；对公共接口用表格（名称 | 参数 | 返回值 | 说明）。
+
+### 依赖与调用
+本文件依赖的项目内模块或第三方库（仅从代码块可见部分归纳）。
+
+### 配置与安全
+若出现配置、密钥、路径相关逻辑则简要说明；否则写「本文件未体现」。
+
+### 注意事项
+至少 1 条边界情况、潜在风险或改进点；无明显问题时写「未发现明显问题」。
+
+若本文件几乎是项目唯一核心文件，可在末尾增加 ### 项目补充，用 3–5 条要点概括安装/运行/架构（能推断则写，否则标待补充）。
+
+---
+"""
+
+OVERVIEW_PROMPT_PREFIX = """以下是多个源文件的逐项分析。请生成项目级 Markdown 总览（将写入 README 的「概览」一节）。
+
+必须按顺序包含以下章节（使用 ## 标题）：
+
+## 项目概述
+一句话定位 + 核心能力列表（3–6 条）。
+
+## 快速开始
+安装、配置、最小运行示例；信息不足时列出「待补充」项。
+
+## 架构设计
+模块划分与核心数据流（可用 Mermaid 代码块）。
+
+## 模块与文件关系
+各目录/文件如何协作；归纳即可，勿重复粘贴各文件分析全文。
+
+## 配置说明
+汇总配置项、环境变量、配置文件路径。
+
+## 依赖关系
+关键第三方库与项目内模块依赖（归纳，不罗列依赖文件全文）。
+
+## 部署与运维
+构建、启动、日志/输出要点；无法推断则标明「需补充」。
+
+## 常见问题与注意事项
+至少 2 条潜在坑点、扫描/分析范围限制或工具约束。
+
+## 架构与质量建议
+共性问题或改进建议（3–5 条，可选）。
+
+---
+逐项分析如下：
+
+"""
 
 
 def _truncate_code(code: str, max_lines: int = MAX_CODE_LINES) -> str:
@@ -52,10 +119,10 @@ def _chat(model: BaseChatModel, prompt: str) -> str:
 def analyze_blocks(
     blocks: list[CodeBlock],
     *,
-    provider: str | None = None,
-    api_key: str | None = None,
-    model_name: str | None = None,
-    base_url: str | None = None,
+    provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> dict[str, Any]:
     """按文件分批调用大模型，并生成总览。"""
     chat_model = get_chat_model(
@@ -85,6 +152,7 @@ def analyze_blocks(
             body = body[:MAX_CHARS_PER_REQUEST] + "\n\n...(内容过长已截断)"
 
         prompt = (
+            f"{FILE_ANALYSIS_PROMPT_PREFIX}"
             f"文件路径: {file_path}\n"
             f"语言: {file_blocks[0].language}\n"
             f"代码块数量: {len(file_blocks)}\n\n"
@@ -100,13 +168,7 @@ def analyze_blocks(
         )
         file_summaries.append(f"【{file_path}】\n{analysis}")
 
-    overview_prompt = (
-        "以下是多个源文件的逐项分析，请生成一份项目级总览（中文）：\n"
-        "1. 项目整体结构\n"
-        "2. 各文件之间的关系\n"
-        "3. 共性问题或架构建议\n\n"
-        + "\n\n---\n\n".join(file_summaries)
-    )
+    overview_prompt = OVERVIEW_PROMPT_PREFIX + "\n\n---\n\n".join(file_summaries)
     if len(overview_prompt) > MAX_CHARS_PER_REQUEST:
         overview_prompt = overview_prompt[:MAX_CHARS_PER_REQUEST] + "\n...(已截断)"
 
@@ -129,10 +191,10 @@ def analyze_blocks(
 def analyze_files(
     paths: list[str],
     *,
-    provider: str | None = None,
-    api_key: str | None = None,
-    model_name: str | None = None,
-    base_url: str | None = None,
+    provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> dict[str, Any]:
     """从文件路径列表提取代码块并分析。"""
     blocks = extract_blocks_from_paths(paths)
@@ -148,10 +210,10 @@ def analyze_files(
 def analyze_folder(
     folder: str,
     *,
-    provider: str | None = None,
-    api_key: str | None = None,
-    model_name: str | None = None,
-    base_url: str | None = None,
+    provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> dict[str, Any]:
     """扫描目录、提取代码块并分析。"""
     from devops.scan import scan_code_files

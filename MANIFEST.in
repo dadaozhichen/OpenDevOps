@@ -1,2 +1,3 @@
 include LICENSE README.md requirements.txt
 include devops/scan/scan.h
+include devops/tree_sitter/languages.h

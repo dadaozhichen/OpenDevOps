@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Union
 
 from tree_sitter import Node, Tree
-from tree_sitter_languages import get_parser
+
+from devops.tree_sitter import get_parser
 
 from devops.scan import scan_code_files
 
@@ -34,7 +35,6 @@ EXT_TO_LANGUAGE: dict[str, str] = {
     ".rb": "ruby",
     ".php": "php",
     ".cs": "c_sharp",
-    ".swift": "swift",
     ".kt": "kotlin",
     ".scala": "scala",
     ".sh": "bash",
@@ -64,11 +64,7 @@ LANGUAGE_NODE_TYPES: dict[str, tuple[str, ...]] = {
     "kotlin": ("function_declaration", "class_declaration"),
     "scala": ("function_definition", "class_definition", "object_definition"),
     "bash": ("function_definition",),
-    "swift": ("function_declaration", "class_declaration", "struct_declaration"),
 }
-
-_parser_cache: dict[str, object] = {}
-
 
 @dataclass
 class CodeBlock:
@@ -84,14 +80,8 @@ class CodeBlock:
         return asdict(self)
 
 
-def language_for_path(path: str | Path) -> Optional[str]:
+def language_for_path(path: Union[str, Path]) -> Optional[str]:
     return EXT_TO_LANGUAGE.get(Path(path).suffix.lower())
-
-
-def _get_parser(language: str):
-    if language not in _parser_cache:
-        _parser_cache[language] = get_parser(language)
-    return _parser_cache[language]
 
 
 def _read_source(path: Path) -> Optional[bytes]:
@@ -186,7 +176,7 @@ def _extract_from_tree(
     return blocks
 
 
-def extract_blocks_from_file(path: str | Path) -> list[CodeBlock]:
+def extract_blocks_from_file(path: Union[str, Path]) -> list[CodeBlock]:
     p = Path(path)
     language = language_for_path(p)
     if language is None:
@@ -197,7 +187,7 @@ def extract_blocks_from_file(path: str | Path) -> list[CodeBlock]:
         return []
 
     try:
-        tree = _get_parser(language).parse(source)
+        tree = get_parser(language).parse(source)
     except Exception:
         return []
 

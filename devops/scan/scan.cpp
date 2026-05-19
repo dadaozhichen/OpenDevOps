@@ -63,7 +63,7 @@ bool isCodeFile(const fs::path& path) {
         ".c", ".cc", ".cpp", ".cxx", ".h", ".hpp",
         ".py", ".js", ".ts", ".tsx", ".jsx",
         ".java", ".go", ".rs", ".rb", ".php",
-        ".cs", ".swift", ".m", ".mm",
+        ".cs", ".m", ".mm",
         ".sh", ".sql", ".html", ".css",
         ".vue", ".kt", ".scala",
     };

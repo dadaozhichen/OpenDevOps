@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# tree-sitter grammars (由 scripts/vendor_tree_sitter.sh 拉取)
+devops/tree_sitter/vendor/

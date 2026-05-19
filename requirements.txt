@@ -1,5 +1,4 @@
 # 推荐使用: pip install -e .
 tree-sitter>=0.21.0,<0.22
-tree-sitter-languages>=1.10.0
 openai>=1.40.0
 pybind11>=2.11

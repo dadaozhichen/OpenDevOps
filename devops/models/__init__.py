@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from devops.config import ModelConfig, list_providers
 from devops.models.base import BaseChatModel
 from devops.models.openai import OpenAIChatModel
@@ -24,10 +26,10 @@ def create_chat_model(config: ModelConfig) -> BaseChatModel:
 
 def get_chat_model(
   *,
-  provider: str | None = None,
-  api_key: str | None = None,
-  model: str | None = None,
-  base_url: str | None = None,
+  provider: Optional[str] = None,
+  api_key: Optional[str] = None,
+  model: Optional[str] = None,
+  base_url: Optional[str] = None,
 ) -> BaseChatModel:
   from devops.config import load_config
 
