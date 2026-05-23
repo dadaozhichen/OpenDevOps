@@ -25,16 +25,17 @@ pip install -e .
 pip install zhipuai
 ```
 
-On tag push, GitHub Actions **prebuilds** `scan_native` and `tree_sitter_native` on Linux / macOS / Windows for Python 3.11–3.13 and uploads wheels.  
+On tag push, GitHub Actions **prebuilds** `scan_native` and `tree_sitter_native` on Linux / macOS / Windows for **Python 3.9–3.13** and uploads wheels.  
 `pip install devops-analyzer` prefers those wheels, so you usually **do not need to compile C++ locally**.
 
 Prebuilt `.whl` files are also on [GitHub Releases](https://github.com/dadaozhichen/OpenDevOps/releases):
 
 ```bash
-pip install devops_analyzer-0.1.5-cp313-cp313-win_amd64.whl
+pip install devops_analyzer-0.1.7-cp311-cp311-win_amd64.whl
 ```
 
-**Python 3.13** installs `tree-sitter>=0.22` (prebuilt wheels on Windows, etc.). Python 3.12 and below use `tree-sitter 0.21.x`.
+**Supported Python**: `>=3.9` (see `requires-python` in `pyproject.toml`).  
+**tree-sitter**: `0.21.x` for 3.9–3.12; `>=0.22` for 3.13+ (PyPI environment markers).
 
 #### Windows
 
@@ -96,6 +97,9 @@ devops /path/to/project -o README.md
 
 # override model without editing config
 devops /path/to/project --provider deepseek --model deepseek-chat
+
+# English README (default is Chinese)
+devops /path/to/project --lang en
 ```
 
 ### Commands
@@ -132,16 +136,17 @@ pip install -e .
 pip install zhipuai
 ```
 
-打 tag 发布时，GitHub Actions 会在 **Linux / macOS / Windows** 上为 Python 3.11–3.13 **预编译** `scan_native` 与 `tree_sitter_native` 并上传 wheel。  
+打 tag 发布时，GitHub Actions 会在 **Linux / macOS / Windows** 上为 **Python 3.9–3.13** **预编译** `scan_native` 与 `tree_sitter_native` 并上传 wheel。  
 因此 `pip install devops-analyzer` 会优先安装这些 wheel，**通常不需要在本机编译 C++**。
 
 也可从 [GitHub Releases](https://github.com/dadaozhichen/OpenDevOps/releases) 下载对应平台的 `.whl` 手动安装：
 
 ```bash
-pip install devops_analyzer-0.1.5-cp313-cp313-win_amd64.whl
+pip install devops_analyzer-0.1.7-cp311-cp311-win_amd64.whl
 ```
 
-**Python 3.13** 会自动安装 `tree-sitter>=0.22`（Windows 等平台有预编译 wheel）；3.12 及以下使用 `tree-sitter 0.21.x`。
+**支持的 Python**：`>=3.9`（见 `pyproject.toml` 中 `requires-python`）。  
+**tree-sitter**：3.9–3.12 使用 `0.21.x`；3.13 及以上使用 `>=0.22`（由 PyPI 环境标记自动选择）。
 
 #### Windows
 
@@ -203,6 +208,9 @@ devops /path/to/project -o README.md
 
 # 临时覆盖模型（不改配置文件）
 devops /path/to/project --provider deepseek --model deepseek-chat
+
+# 生成英文 README（默认中文）
+devops /path/to/project --lang en
 ```
 
 ### 命令一览

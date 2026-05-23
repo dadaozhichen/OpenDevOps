@@ -70,7 +70,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--base-url",
         help="Temporary API base URL (OpenAI-compatible)",
     )
-
+    analyze_parser.add_argument(
+        "-l",
+        "--lang",
+        choices=["zh", "en"],
+        default="zh",
+        help="README output language: zh (default) or en",
+    )
     # Compatibility: devops /path/to/project (no subcommand)
     parser.add_argument(
         "project_legacy",
@@ -100,6 +106,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--base-url",
         help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "-l",
+        "--lang",
+        choices=["zh", "en"],
+        default="zh",
+        help="README output language: zh (default) or en",
     )
 
     return parser
@@ -136,9 +149,10 @@ def _run_analyze(args: argparse.Namespace) -> int:
             model=args.model_name,
             base_url=args.base_url,
         )
+        lang = getattr(args, "lang", "zh")
         print(
             f"Analyzing: {folder_path}  "
-            f"[{cfg.provider} / {cfg.model}]"
+            f"[{cfg.provider} / {cfg.model}]  [lang={lang}]"
         )
         result = analyze_folder(
             str(folder_path),
@@ -146,6 +160,7 @@ def _run_analyze(args: argparse.Namespace) -> int:
             api_key=args.api_key,
             model_name=args.model_name,
             base_url=args.base_url,
+            output_lang=lang,
         )
         output = write_project_readme(
             str(folder_path), result, filename=args.output

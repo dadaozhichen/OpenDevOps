@@ -7,18 +7,115 @@
 #include <unordered_set>
 #include <vector>
 
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 namespace fs = std::filesystem;
 
 namespace {
 
-// Python passes UTF-8 paths; use u8path on all platforms
-fs::path toPath(const std::string& utf8Path) {
-    return fs::u8path(utf8Path);
+#if defined(_WIN32)
+std::wstring utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) {
+        return std::wstring();
+    }
+    const int size = MultiByteToWideChar(
+        CP_UTF8,
+        MB_ERR_INVALID_CHARS,
+        utf8.data(),
+        static_cast<int>(utf8.size()),
+        nullptr,
+        0);
+    if (size <= 0) {
+        return std::wstring();
+    }
+    std::wstring wide(static_cast<size_t>(size), L'\0');
+    MultiByteToWideChar(
+        CP_UTF8,
+        MB_ERR_INVALID_CHARS,
+        utf8.data(),
+        static_cast<int>(utf8.size()),
+        wide.data(),
+        size);
+    return wide;
 }
 
-// Return forward-slash paths for cross-platform use in Python
+std::string wideToUtf8(const std::wstring& wide) {
+    if (wide.empty()) {
+        return std::string();
+    }
+    const int size = WideCharToMultiByte(
+        CP_UTF8,
+        WC_ERR_INVALID_CHARS,
+        wide.data(),
+        static_cast<int>(wide.size()),
+        nullptr,
+        0,
+        nullptr,
+        nullptr);
+    if (size <= 0) {
+        return std::string();
+    }
+    std::string utf8(static_cast<size_t>(size), '\0');
+    WideCharToMultiByte(
+        CP_UTF8,
+        WC_ERR_INVALID_CHARS,
+        wide.data(),
+        static_cast<int>(wide.size()),
+        utf8.data(),
+        size,
+        nullptr,
+        nullptr);
+    return utf8;
+}
+
+std::string utf8GenericPath(const fs::path& path) {
+    std::string out = wideToUtf8(path.wstring());
+    for (char& ch : out) {
+        if (ch == '\\') {
+            ch = '/';
+        }
+    }
+    return out;
+}
+#endif
+
+// Python passes UTF-8; on Windows convert to wchar_t for the filesystem APIs.
+fs::path toPath(const std::string& utf8Path) {
+#if defined(_WIN32)
+    return fs::path(utf8ToWide(utf8Path));
+#else
+    return fs::u8path(utf8Path);
+#endif
+}
+
+// Return UTF-8 paths with forward slashes for Python.
 std::string toGenericPath(const fs::path& path) {
+#if defined(_WIN32)
+    return utf8GenericPath(path);
+#else
     return path.generic_string();
+#endif
+}
+
+std::string pathStemUtf8(const fs::path& path) {
+#if defined(_WIN32)
+    return wideToUtf8(path.filename().wstring());
+#else
+    return path.filename().string();
+#endif
+}
+
+std::string pathExtensionUtf8(const fs::path& path) {
+#if defined(_WIN32)
+    return wideToUtf8(path.extension().wstring());
+#else
+    return path.extension().string();
+#endif
 }
 
 bool nameEquals(const std::string& a, const std::string& b) {
@@ -45,11 +142,10 @@ bool shouldSkipDir(const fs::path& dir) {
         "build", "dist", "out", "target", "bin", "obj",
         ".idea", ".vscode", ".vs",
         "__pycache__", ".next", ".venv", "venv", "env",
-        // Common Windows / MSVC build output dirs
         "Debug", "Release", "x64", "Win32", "CMakeFiles",
     };
 
-    const std::string name = dir.filename().string();
+    const std::string name = pathStemUtf8(dir);
     for (const char* entry : skip) {
         if (nameEquals(name, entry)) {
             return true;
@@ -68,7 +164,7 @@ bool isCodeFile(const fs::path& path) {
         ".vue", ".kt", ".scala",
     };
 
-    std::string ext = path.extension().string();
+    std::string ext = pathExtensionUtf8(path);
     for (char& c : ext) {
         c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     }
